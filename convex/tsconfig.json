@@ -20,6 +20,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["./**/*"],
+  "include": ["./**/*", "../src/lib/checkPermission.ts"],
   "exclude": ["./_generated"]
 }

@@ -4,41 +4,41 @@ import { Link } from "react-router";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as any },
+  },
+};
+
+const imageVariants = {
+  hidden: { opacity: 0, scale: 1.1 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as any },
+  },
+};
+
+
 function Hero() {
   const [imageLoaded, setImageLoaded] = useState(false);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as any },
-    },
-  };
-
-  const imageVariants = {
-    hidden: { opacity: 0, scale: 1.1 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as any },
-    },
-  };
-
   return (
-    <section className="relative min-h-[calc(100vh-5rem)] bg-background overflow-hidden">
-
+    <section className="relative bg-background overflow-hidden">
       <div className="container mx-auto px-4 py-8 md:py-10 lg:py-12 relative z-10">
         <motion.div
           variants={containerVariants}
@@ -64,7 +64,7 @@ function Hero() {
 
             <motion.h1
               variants={itemVariants}
-              className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium leading-[1.15] mb-4 md:mb-5 tracking-tight"
+              className="font-serif text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-medium leading-[1.15] mb-4 md:mb-5 tracking-tight"
             >
               Redéfinissez Votre{" "}
               <span className=" md:inline">

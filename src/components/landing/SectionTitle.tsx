@@ -17,7 +17,7 @@ const sizeClasses = {
   xl: "text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
 };
 
-export function SectionTitle({
+export default function SectionTitle({
   children,
   highlight,
   className,
@@ -51,42 +51,6 @@ export function SectionTitle({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
-    >
-      {content}
-    </motion.div>
-  );
-}
-
-interface SectionDescriptionProps {
-  children: React.ReactNode;
-  className?: string;
-  animate?: boolean;
-}
-
-export function SectionDescription({
-  children,
-  className,
-  animate = true,
-}: SectionDescriptionProps) {
-  const content = (
-    <p
-      className={cn(
-        "text-muted-foreground text-base md:text-lg leading-relaxed",
-        className,
-      )}
-    >
-      {children}
-    </p>
-  );
-
-  if (!animate) return content;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay: 0.1 }}
     >
       {content}
     </motion.div>

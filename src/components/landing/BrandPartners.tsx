@@ -11,13 +11,13 @@ export function BrandPartners() {
   const duplicatedBrands = [...brands, ...brands]
 
   return (
-    <section className="py-10 border-y border-border bg-background overflow-hidden">
+    <section className="py-10 md:py-12 border-y border-border bg-background overflow-hidden">
       <div className="relative">
         <div className="flex animate-slide">
           {duplicatedBrands.map((brand, index) => (
             <div
               key={index}
-              className="shrink-0 flex flex-col items-center justify-center px-10 md:px-16 lg:px-20"
+              className="flex-shrink-0 flex flex-col items-center justify-center px-10 md:px-16 lg:px-20"
             >
               <span
                 className={`${brand.style} text-foreground whitespace-nowrap opacity-70 hover:opacity-100 transition-opacity cursor-pointer`}
