@@ -67,42 +67,20 @@ export const passwordResetSchema = z
     path: ["confirmPassword"],
   });
 
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
 const MAX_IMAGES = 10;
-const ACCEPTED_IMAGE_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
 
-const imageFileSchema = z
-  .union([
-    z.instanceof(File, { message: "L'image est requise." }),
-    z.string().min(1, "L'image est requise."),
-  ])
-  .refine(
-    (file) => {
-      if (file instanceof File) {
-        return file.size <= MAX_FILE_SIZE;
-      }
-      return true;
-    },
-    {
-      message: "La taille de l'image ne doit pas dépasser 5MB.",
-    },
-  )
-  .refine(
-    (file) => {
-      if (file instanceof File) {
-        return ACCEPTED_IMAGE_TYPES.includes(file.type);
-      }
-      return true;
-    },
-    {
-      message: "Format accepté: .jpg, .jpeg, .png, .webp",
-    },
-  );
+const imageSchema = z
+  .object({
+    imageKey: z.string().min(1, "Au moins une image est requise.").optional(),
+    imageUrl: z.url("URL d'image invalide.").optional(),
+    imageUploadStatus: z.enum(["success", "uploading"]),
+    imageId: z.string(),
+  })
+  .refine((data) => data.imageUploadStatus !== "success" || !!data.imageKey, {
+    message:
+      "La clé de l'image est requise lorsque le téléchargement est réussi.",
+    path: ["imageKey"],
+  });
 
 const sizeSchema = z.object({
   size: z
@@ -127,13 +105,19 @@ const colorSchema = z.object({
     .min(1, "Le code hex est requis.")
     .regex(/^#([0-9A-Fa-f]{3}){1,2}$/, "Code couleur hexadécimal invalide."),
   images: z
-    .array(imageFileSchema)
+    .array(imageSchema)
     .min(1, "Au moins une image est requise.")
     .max(
       MAX_IMAGES,
       `Vous ne pouvez pas télécharger plus de ${MAX_IMAGES} images.`,
     ),
-  sizes: z.array(sizeSchema).min(1, "Au moins une taille est requise."),
+  sizes: z
+    .array(sizeSchema)
+    .min(1, "Au moins une taille est requise.")
+    .refine((sizes) => {
+      const sizeSet = new Set(sizes.map((s) => s.size.toLowerCase()));
+      return sizeSet.size === sizes.length;
+    }, "Les tailles doivent être uniques."),
 });
 
 export const productFormSchema = z
@@ -232,3 +216,4 @@ export type PasswordResetInput = z.infer<typeof passwordResetSchema>;
 export type ProductFormData = z.infer<typeof productFormSchema>;
 export type ColorInput = z.infer<typeof colorSchema>;
 export type SizeInput = z.infer<typeof sizeSchema>;
+export type ImageInput = z.infer<typeof imageSchema>;

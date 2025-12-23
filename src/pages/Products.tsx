@@ -40,76 +40,60 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex-helpers/react/cache";
 import { api } from "../../convex/_generated/api";
 import { StatisticsSkeleton } from "@/components/skeletons/StatisticsSkeleton";
 import { ProductsTableSkeleton } from "@/components/skeletons/ProductsTableSkeleton";
+import { Id } from "convex/_generated/dataModel";
 
-const mockCategories = [
-  { _id: "cat1", name: "Costumes" },
-  { _id: "cat2", name: "Chemises" },
-  { _id: "cat3", name: "Pantalons" },
-  { _id: "cat4", name: "Accessoires" },
-];
+type ColumnsProductsType = {
+  _id: Id<"products">;
+  name: string;
+  description: string;
+  costPrice: number;
+  salePrice: number;
+  category: {
+    _id: Id<"categories">;
+    name: string;
+  };
+  productColors: {
+    _id: Id<"productColors">;
+    colorName: string;
+    colorHex: string;
+    images: {
+      imageUploadStatus: string;
+      imageKey: string;
+      imageUrl: string;
+      imageId: string;
+    }[];
+    sizes: {
+      size: string;
+      quantity: number;
+    }[];
+  }[];
+};
 
-const mockProducts = [
-  {
-    _id: "prod1",
-    name: "Blazer Laine Premium",
-    description: "Blazer en laine mérinos avec finitions main",
-    category: { _id: "cat1", name: "Costumes" },
-    colors: [
-      {
-        _id: "color1",
-        colorName: "Noir",
-        colorHex: "#1a1a1a",
-        images: [
-          "/public/black-wool-blazer-menswear-premium.jpg",
-          "/public/black-wool-blazer-premium-menswear.jpg",
-        ] as (string | File)[],
-        sizes: [
-          { _id: "size1", size: "S", quantity: 5 },
-          { _id: "size2", size: "M", quantity: 12 },
-          { _id: "size3", size: "L", quantity: 8 },
-        ],
-      },
-      {
-        _id: "color2",
-        name: "Gris Anthracite",
-        hex: "#4a4a4a",
-        images: ["/public/premium-grey-tailored-suit-menswear.jpg"],
-        sizes: [
-          { _id: "size4", size: "S", quantity: 3 },
-          { _id: "size5", size: "M", quantity: 7 },
-          { _id: "size6", size: "L", quantity: 10 },
-        ],
-      },
-    ],
-    price: { _id: "price1", cost_price: 180, sale_price: 349 },
-  },
-];
+
+
 
 export default function Products() {
-  // const statistics = useQuery(api.products.getGenerallProductsInfo);
-  // const { results } = usePaginatedQuery( api.products.listProducts, {},{ initialNumItems: 10 },);
-  const statistics = {
-    totalProducts: 125,
-    totalUnite: 845,
-    projectRevenue: 45230,
-
-  };
-  const [viewProduct, setViewProduct] = useState<
-    (typeof mockProducts)[0] | null
-  >(null);
+  const statistics = useQuery(api.products.getGenerallProductsInfo);
+  const { results } = usePaginatedQuery(
+    api.products.listProducts,
+    {},
+    { initialNumItems: 10 },
+  );
+  const categories = useQuery(api.categories.getAllCategories) || [];
+  const [viewProduct, setViewProduct] = useState<ColumnsProductsType | null>(null);
   const [editProduct, setEditProduct] = useState<
-    (typeof mockProducts)[0] | null
+    ColumnsProductsType | null
   >(null);
   const [deleteProduct, setDeleteProduct] = useState<
-    (typeof mockProducts)[0] | null
+    ColumnsProductsType | null
   >(null);
   const [showCreateSheet, setShowCreateSheet] = useState(false);
 
-  const ProductsColumns: ColumnDef<(typeof mockProducts)[0]>[] = [
+  const ProductsColumns: ColumnDef<ColumnsProductsType>[] = [
     {
       header: "Produit",
       accessorKey: "name",
@@ -119,7 +103,10 @@ export default function Products() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted">
               <img
-                src={typeof product.colors[0] === "string" ? product.colors[0] : "/placeholder.svg"}
+                src={
+                  product.productColors?.[0]?.images?.[0].imageUrl ||
+                  "/placeholder.svg"
+                }
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -153,9 +140,9 @@ export default function Products() {
         const product = row.original;
         return (
           <div>
-            <p className="font-semibold">{product.price.sale_price} DZ</p>
+            <p className="font-semibold">{product.salePrice} DZ</p>
             <p className="text-xs text-muted-foreground">
-              Coût: {product.price.cost_price} DZ
+              Coût: {product.costPrice} DZ
             </p>
           </div>
         );
@@ -166,7 +153,7 @@ export default function Products() {
       accessorKey: "stock",
       cell: ({ row }) => {
         const product = row.original;
-        const productStock = product.colors.reduce(
+        const productStock = product.productColors.reduce(
           (acc, c) => acc + c.sizes.reduce((s, size) => s + size.quantity, 0),
           0,
         );
@@ -192,12 +179,12 @@ export default function Products() {
         const product = row.original;
         return (
           <div className="flex gap-1">
-            {product.colors.map((color) => (
+            {product.productColors.map((color) => (
               <div
                 key={color._id}
                 className="w-6 h-6 rounded-full border-2 border-background shadow-sm"
-                style={{ backgroundColor: color.hex }}
-                title={color.name}
+                style={{ backgroundColor: color.colorHex }}
+                title={color.colorName}
               />
             ))}
           </div>
@@ -246,21 +233,20 @@ export default function Products() {
   };
 
   const getEditDefaultValues = (
-    product: (typeof mockProducts)[0],
+    product: ColumnsProductsType,
   ): ProductFormData => ({
     name: product.name,
     description: product.description,
     category: product.category._id,
-    productColors: product.colors.map((c) => ({
-      colorName: c.colorName as string,
-      colorHex: c.colorHex as string,
-      images: c.images.length > 0 ? c.images : [""],
+    productColors: product.productColors.map((c) => ({
+      colorName: c.colorName,
+      colorHex: c.colorHex,
+      images: c.images as { imageUploadStatus: "success" | "uploading"; imageId: string; imageKey?: string | undefined; imageUrl?: string | undefined; }[],
       sizes: c.sizes.map((s) => ({ size: s.size, quantity: s.quantity })),
     })),
-    costPrice: product.price.cost_price,
-    salePrice: product.price.sale_price,
+    costPrice: product.costPrice,
+    salePrice: product.salePrice,
   });
-
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -278,7 +264,7 @@ export default function Products() {
 
           <StatisticsCard
             title="Stock Total"
-            value={`${statistics.totalUnite} unités`}
+            value={`${statistics.totalUnits} unités`}
             // trending="up"
             // trendValue="+5%"
             // caption="disponibles"
@@ -321,14 +307,14 @@ export default function Products() {
               Nouveau Produit
             </Button>
           </div>
-          {/* {results ? (
+          {results ? (
             <DataTable
               columns={ProductsColumns}
-              data={results as unknown as (typeof mockProducts)[0][]}
+              data={results}
             />
           ) : (
             <ProductsTableSkeleton />
-          )} */}
+          )}
         </div>
       </Card>
 
@@ -352,7 +338,7 @@ export default function Products() {
           </div>
 
           <ProductForm
-            categories={mockCategories}
+            categories={categories}
             isEdit={false}
             setShowCreateSheet={setShowCreateSheet}
           />
@@ -389,7 +375,7 @@ export default function Products() {
                         Prix de Vente
                       </p>
                       <p className="text-2xl font-serif font-medium">
-                        {viewProduct.price.sale_price} €
+                        {viewProduct.salePrice} €
                       </p>
                     </div>
                     <div className="bg-muted/30 rounded-xl p-4 text-center">
@@ -397,7 +383,7 @@ export default function Products() {
                         Prix Coûtant
                       </p>
                       <p className="text-2xl font-serif font-medium">
-                        {viewProduct.price.cost_price} €
+                        {viewProduct.costPrice} €
                       </p>
                     </div>
                     <div className="bg-primary/10 rounded-xl p-4 text-center">
@@ -406,9 +392,9 @@ export default function Products() {
                       </p>
                       <p className="text-2xl font-serif font-medium text-primary">
                         {Math.round(
-                          ((viewProduct.price.sale_price -
-                            viewProduct.price.cost_price) /
-                            viewProduct.price.sale_price) *
+                          ((viewProduct.salePrice -
+                            viewProduct.costPrice) /
+                            viewProduct.salePrice) *
                             100,
                         )}
                         %
@@ -428,10 +414,10 @@ export default function Products() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground uppercase tracking-wider">
                       <Layers className="w-4 h-4" />
-                      Variantes ({viewProduct.colors.length} couleurs)
+                      Variantes ({viewProduct.productColors.length} couleurs)
                     </div>
 
-                    {viewProduct.colors.map((color) => (
+                    {viewProduct.productColors.map((color) => (
                       <div
                         key={color._id}
                         className="bg-muted/30 rounded-xl overflow-hidden"
@@ -440,12 +426,12 @@ export default function Products() {
                           <div className="flex items-center gap-3">
                             <div
                               className="w-10 h-10 rounded-lg border-2 border-background shadow-sm"
-                              style={{ backgroundColor: color.hex }}
+                              style={{ backgroundColor: color.colorHex }}
                             />
                             <div>
-                              <p className="font-medium">{color.name}</p>
+                              <p className="font-medium">{color.colorName}</p>
                               <p className="text-xs text-muted-foreground font-mono">
-                                {color.hex}
+                                {color.colorHex}
                               </p>
                             </div>
                           </div>
@@ -470,7 +456,11 @@ export default function Products() {
                                   className="aspect-square rounded-lg overflow-hidden border border-border bg-muted"
                                 >
                                   <img
-                                    src={typeof img === "string" ? img : "/placeholder.svg"}
+                                    src={
+                                      typeof img === "string"
+                                        ? img
+                                        : "/placeholder.svg"
+                                    }
                                     alt={`${viewProduct.name} - Image ${imgIdx + 1}`}
                                     className="w-full h-full object-cover"
                                   />
@@ -484,9 +474,9 @@ export default function Products() {
                               Tailles & Stock
                             </p>
                             <div className="grid grid-cols-3 gap-2">
-                              {color.sizes.map((size) => (
+                              {color.sizes.map((size,index) => (
                                 <div
-                                  key={size._id}
+                                  key={index}
                                   className="flex items-center justify-between p-3 bg-background rounded-lg border border-border/50"
                                 >
                                   <span className="font-medium text-lg">
@@ -520,7 +510,7 @@ export default function Products() {
                           Stock Total
                         </p>
                         <p className="text-3xl font-serif font-medium">
-                          {viewProduct.colors.reduce(
+                          {viewProduct.productColors.reduce(
                             (acc, c) =>
                               acc +
                               c.sizes.reduce((s, size) => s + size.quantity, 0),
@@ -534,7 +524,7 @@ export default function Products() {
                           Variantes
                         </p>
                         <p className="text-3xl font-serif font-medium">
-                          {viewProduct.colors.reduce(
+                          {viewProduct.productColors.reduce(
                             (acc, c) => acc + c.sizes.length,
                             0,
                           )}
@@ -585,7 +575,7 @@ export default function Products() {
               <ProductForm
                 key={editProduct._id}
                 defaultValues={getEditDefaultValues(editProduct)}
-                categories={mockCategories}
+                categories={categories}
                 isEdit={true}
               />
             )}

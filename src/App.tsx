@@ -8,6 +8,7 @@ import AuthLayout from "./layouts/AuthLayout.tsx";
 import  ForgotPassword  from "@/pages/ForgetPassword.tsx";
 import AdminLayout from "./layouts/AdminLayout.tsx";
 import Products from "./pages/Products.tsx";
+import { Toaster } from "@/components/ui/sonner"
 
 const App = () => {
   return (
@@ -27,6 +28,7 @@ const App = () => {
           </Route>
         </Route>
       </Routes>
+      <Toaster />
     </main>
   );
 };

@@ -41,7 +41,7 @@ export default defineSchema({
     colorName: v.string(),
     colorHex: v.string(),
     images: v.optional(v.array(v.string())),
-  }),
+  }).index("by_productId", ["productId"]),
   categories: defineTable({
     name: v.string(),
   })

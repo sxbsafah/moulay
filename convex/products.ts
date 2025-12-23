@@ -1,4 +1,4 @@
-import { internalMutation, mutation, query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
 import checkPermission from "../src/lib/checkPermission";
@@ -9,8 +9,6 @@ import { paginationOptsValidator } from "convex/server";
 import { Id } from "./_generated/dataModel";
 import { R2 } from "@convex-dev/r2";
 import { components } from "./_generated/api";
-
-
 
 const r2 = new R2(components.r2);
 
@@ -40,9 +38,9 @@ export const createProduct = mutation({
     if (!userId) {
       throw new ConvexError({
         code: "unauthorized",
-        message: "User must be authenticated to create products",
+        message: "L'utilisateur doit être authentifié pour créer des produits",
         details: {
-          root: "Please log as adminto create products",
+          root: "Veuillez vous connecter en tant qu'administrateur pour créer des produits",
         },
       });
     }
@@ -50,9 +48,9 @@ export const createProduct = mutation({
     if (!hasAccess) {
       throw new ConvexError({
         code: "unauthorized",
-        message: "User does not have permission to create products",
+        message: "L'utilisateur n'a pas la permission de créer des produits",
         details: {
-          root: "You must be an admin to create products",
+          root: "Vous devez être administrateur pour créer des produits",
         },
       });
     }
@@ -67,9 +65,9 @@ export const createProduct = mutation({
     if (existingProduct) {
       throw new ConvexError({
         code: "conflict",
-        message: "A product with this name already exists",
+        message: "Un produit avec ce nom existe déjà",
         details: {
-          name: "Product name must be unique",
+          name: "Le nom du produit doit être unique",
         },
       });
     }
@@ -77,9 +75,9 @@ export const createProduct = mutation({
     if (!category) {
       throw new ConvexError({
         code: "not_found",
-        message: "Category not found",
+        message: "Catégorie non trouvée",
         details: {
-          category: "The specified category does not exist",
+          category: "La catégorie spécifiée n'existe pas",
         },
       });
     }
@@ -89,136 +87,151 @@ export const createProduct = mutation({
       category: parsed.data.category as Id<"categories">,
       costPrice: parsed.data.costPrice,
       salePrice: parsed.data.salePrice,
-    })
+    });
     for (const color of parsed.data.productColors) {
       const productColorId = await ctx.db.insert("productColors", {
         productId: productId,
         colorHex: color.colorHex,
         colorName: color.colorName,
         images: color.images,
-      })
+      });
       for (const size of color.sizes) {
         await ctx.db.insert("productVariants", {
           productId: productId,
           size: size.size,
           quantity: size.quantity,
           productColor: productColorId,
-        })
+        });
       }
     }
   },
 });
 
-// export const getGenerallProductsInfo = query({
-//   args: {},
-//   handler: async (ctx) => {
-//     const userId = await getAuthUserId(ctx);
-//     if (!userId) {
-//       throw new ConvexError({
-//         code: "unauthorized",
-//         message: "User must be authenticated to view products",
-//         details: {
-//           root: "Please log in to view products",
-//         },
-//       });
-//     }
-//     const hasAccess = await checkPermission(ctx, userId, "admin");
-//     if (!hasAccess) {
-//       throw new ConvexError({
-//         code: "unauthorized",
-//         message: "User does not have permission to view products",
-//         details: {
-//           root: "You must be an admin to view products",
-//         },
-//       });
-//     }
-//     return {
-//       totalProducts: (await ctx.db.query("products").collect()).length,
-//       totalUnite: (await ctx.db.query("product_sizes").collect()).reduce(
-//         (acc, size) => acc + size.quantity,
-//         0,
-//       ),
-//       projectRevenue: (await ctx.db.query("price").collect()).reduce(
-//         (acc, price) => acc + price.sale_price,
-//         0,
-//       ),
-//     };
-//   },
-// });
+export const getGenerallProductsInfo = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "L'utilisateur doit être authentifié pour voir les produits",
+        details: {
+          root: "Veuillez vous connecter pour voir les produits",
+        },
+      });
+    }
+    const hasAccess = await checkPermission(ctx, userId, "staff");
+    if (!hasAccess) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "L'utilisateur n'a pas la permission de voir les produits",
+        details: {
+          root: "Vous devez être administrateur pour voir les produits",
+        },
+      });
+    }
+    return {
+      totalProducts: (await ctx.db.query("products").collect()).length,
+      totalUnits: (await ctx.db.query("productVariants").collect()).reduce(
+        (acc, productVariant) => acc + productVariant.quantity,
+        0,
+      ),
+      projectRevenue: (await ctx.db.query("products").collect()).reduce(
+        (acc, price) => acc + price.salePrice,
+        0,
+      ),
+    };
+  },
+});
 
-// export const listProducts = query({
-//   args: { paginationOpts: paginationOptsValidator },
-//   handler: async (ctx, args) => {
-//     const userId = await getAuthUserId(ctx);
-//     console.log("User ID:", userId);
-//     if (!userId) {
-//       throw new ConvexError({
-//         code: "unauthorized",
-//         message: "User must be authenticated to view products",
-//         details: {
-//           root: "Please log in to view products",
-//         },
-//       });
-//     }
-//     const hasAccess = await checkPermission(ctx, userId, "admin");
-//     if (!hasAccess) {
-//       throw new ConvexError({
-//         code: "unauthorized",
-//         message: "User does not have permission to view products",
-//         details: {
-//           root: "You must be an admin to view products",
-//         },
-//       });
-//     }
-//     const results = await ctx.db
-//       .query("products")
-//       .order("desc")
-//       .paginate(args.paginationOpts);
-//     const page = await Promise.all(
-//       results.page.map(async (product) => {
-//         const category = await ctx.db.get("categories", product.category);
-//         if (!category) {
-//           throw new ConvexError({
-//             code: "not_found",
-//             message: "Category not found for product",
-//             details: {
-//               category: "The specified category does not exist",
-//             },
-//           });
-//         }
-//         const price = await ctx.db
-//           .query("price")
-//           .withIndex("by_product", (q) => q.eq("product", product._id))
-//           .first();
-//         const colors = await ctx.db
-//           .query("product_colors")
-//           .withIndex("by_product", (q) => q.eq("product", product._id))
-//           .collect();
-//         const colorsWithSizes = await Promise.all(
-//           colors.map(async (color) => {
-//             const sizes = await ctx.db
-//               .query("product_sizes")
-//               .withIndex("by_product_color", (q) =>
-//                 q.eq("product_color", color._id),
-//               )
-//               .collect();
-//             return {
-//               ...color,
-//               sizes,
-//             };
-//           }),
-//         );
-//         return {
-//           ...product,
-//           category,
-//           price: price || null,
-//           colors: colorsWithSizes,
-//         };
-//       }),
-//     );
-//     return { ...results, page };
-//   },
-// });
+export const listProducts = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "User must be authenticated to view products",
+        details: {
+          root: "Please log in to view products",
+        },
+      });
+    }
+    const hasAccess = await checkPermission(ctx, userId, "staff");
+    if (!hasAccess) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "User does not have permission to view products",
+        details: {
+          root: "You must be an admin to view products",
+        },
+      });
+    }
+    const results = await ctx.db
+      .query("products")
+      .order("desc")
+      .paginate(args.paginationOpts);
+
+    return {
+      ...results,
+      page: await Promise.all(
+        results.page.map(async (product) => {
+          const [category, productColors] = await Promise.all([
+            ctx.db.get("categories", product.category),
+            ctx.db
+              .query("productColors")
+              .withIndex("by_productId", (q) => q.eq("productId", product._id))
+              .collect(),
+          ]);
+
+          return {
+            _id: product._id,
+            name: product.name,
+            description: product.description,
+            costPrice: product.costPrice,
+            salePrice: product.salePrice,
+            category: {
+              _id: product.category,
+              name: category?.name || "",
+            },
+            productColors: await Promise.all(
+              productColors.map(async (productColor) => {
+                const variants = await ctx.db
+                  .query("productVariants")
+                  .withIndex("by_product_color", (q) =>
+                    q
+                      .eq("productId", product._id)
+                      .eq("productColor", productColor._id),
+                  )
+                  .collect();
+
+                return {
+                  _id: productColor._id,
+                  colorName: productColor.colorName,
+                  colorHex: productColor.colorHex,
+                  images: productColor.images
+                    ? await Promise.all(
+                        productColor.images.map(async (image) => ({
+                          imageUploadStatus: "uploaded",
+                          imageKey: image,
+                          imageUrl: await r2.getUrl(image),
+                          imageId: image,
+                        })),
+                      )
+                    : [],
+                  sizes: variants.map((variant) => ({
+                    size: variant.size,
+                    quantity: variant.quantity,
+                  })),
+                };
+              }),
+            ),
+          };
+        }),
+      ),
+    };
+  },
+});
 
 // export const createImageMetadata = internalMutation({
 //   args: {

@@ -4,6 +4,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
 import checkPermission from "../src/lib/checkPermission";
 import { QueryCtx } from "./_generated/server";
+import { mutation } from "./_generated/server";
+import { v } from "convex/values";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = [
@@ -60,3 +62,34 @@ export const { generateUploadUrl, syncMetadata, onSyncMetadata } = r2.clientApi(
     },
   },
 );
+
+
+export const removeImage = mutation({
+  args: {
+    imageKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "User must be authenticated to remove product images",
+        details: {
+          root: "Please log in to remove product images",
+        },
+      });
+    }
+    const hasAccess = await checkPermission(ctx, userId, "admin");
+    if (!hasAccess) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "User does not have permission to remove product images",
+        details: {
+          root: "You must be an admin to remove product images",
+        },
+      });
+    }
+    await r2.deleteObject(ctx, args.imageKey);
+    return { success: true };
+  },
+})

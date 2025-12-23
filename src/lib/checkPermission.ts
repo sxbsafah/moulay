@@ -5,12 +5,14 @@ export type Role = (typeof VALID_ROLES)[keyof typeof VALID_ROLES];
 
 const VALID_ROLES = {
   USER: "user",
+  STAFF: "staff",
   ADMIN: "admin",
 } as const;
 
 const roleHierarchy: Record<Role, number> = {
   user: 0,
-  admin: 1,
+  staff: 1,
+  admin: 2,
 };
 
 export default async function checkPermission(
