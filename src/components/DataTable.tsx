@@ -26,7 +26,7 @@ type DataTableProps<TData, TValue> = {
 };
 
 const DataTable = <TData, TValue>({
-  columns,
+columns,
   data,
 }: DataTableProps<TData, TValue>) => {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);

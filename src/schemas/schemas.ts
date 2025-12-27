@@ -5,17 +5,20 @@ import { z } from "zod";
 export const signUpSchema = z.object({
   firstname: z
     .string()
+    .trim()
     .min(2, "Le prénom doit contenir au moins 2 caractères.")
     .max(50, "Le prénom ne peut pas dépasser 50 caractères.")
     .regex(/^[A-Za-zÀ-ÿ]+$/, "Le prénom ne peut contenir que des lettres."),
   lastname: z
     .string()
+    .trim()
     .min(2, "Le nom doit contenir au moins 2 caractères.")
     .max(50, "Le nom ne peut pas dépasser 50 caractères.")
     .regex(/^[A-Za-zÀ-ÿ]+$/, "Le nom ne peut contenir que des lettres."),
   email: z.email("Adresse e-mail invalide."),
   password: z
     .string()
+    .trim()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères.")
     .max(100, "Le mot de passe ne peut pas dépasser 100 caractères.")
     .regex(
@@ -71,10 +74,10 @@ const MAX_IMAGES = 10;
 
 const imageSchema = z
   .object({
-    imageKey: z.string().min(1, "Au moins une image est requise.").optional(),
+    imageKey: z.string().trim().min(1, "Au moins une image est requise.").optional(),
     imageUrl: z.url("URL d'image invalide.").optional(),
     imageUploadStatus: z.enum(["success", "uploading"]),
-    imageId: z.string(),
+    imageId: z.string().trim().min(1, "L'ID de l'image est requis."),
   })
   .refine((data) => data.imageUploadStatus !== "success" || !!data.imageKey, {
     message:
@@ -85,6 +88,7 @@ const imageSchema = z
 const sizeSchema = z.object({
   size: z
     .string()
+    .trim()
     .min(1, "La taille est requise.")
     .max(5, "La taille est trop longue."),
   quantity: z
@@ -93,11 +97,13 @@ const sizeSchema = z.object({
     })
     .int("La quantité doit être un nombre entier.")
     .min(1, "La quantité ne peut pas être inférieure à 1."),
+  productVariantId: z.string().trim().min(1, "L'ID de la variante est requis.").optional(),
 });
 
 const colorSchema = z.object({
   colorName: z
     .string()
+    .trim()
     .min(1, "Le nom de la couleur est requis.")
     .max(30, "Le nom de la couleur est trop long."),
   colorHex: z
@@ -110,7 +116,8 @@ const colorSchema = z.object({
     .max(
       MAX_IMAGES,
       `Vous ne pouvez pas télécharger plus de ${MAX_IMAGES} images.`,
-    ),
+  ),
+  productColorId: z.string().trim().min(1, "L'ID de la couleur est requis.").optional(),
   sizes: z
     .array(sizeSchema)
     .min(1, "Au moins une taille est requise.")
@@ -119,6 +126,8 @@ const colorSchema = z.object({
       return sizeSet.size === sizes.length;
     }, "Les tailles doivent être uniques."),
 });
+
+
 
 export const productFormSchema = z
   .object({
@@ -130,7 +139,7 @@ export const productFormSchema = z
       .string()
       .min(1, "La description est requise.")
       .max(1000, "La description est trop longue."),
-    category: z.string().min(1, "La catégorie est requise."),
+    category: z.string().trim().min(1, "La catégorie est requise."),
     productColors: z
       .array(colorSchema)
       .min(1, "Au moins une couleur est requise."),
@@ -168,15 +177,17 @@ export const createProductSchema = z
   .object({
     name: z
       .string()
+      .trim()
       .min(1, "Le nom du produit est requis.")
       .max(100, "Le nom du produit est trop long."),
     description: z
       .string()
+      .trim()
       .min(1, "La description est requise.")
       .max(1000, "La description est trop longue."),
     costPrice: z.number().min(0, "Le prix de coût ne peut pas être négatif."),
     salePrice: z.number().min(0, "Le prix de vente ne peut pas être négatif."),
-    category: z.string().min(1, "La catégorie est requise."),
+    category: z.string().trim().min(1, "La catégorie est requise."),
     productColors: z
       .array(
         colorSchema.omit({ images: true }).extend({
@@ -204,7 +215,7 @@ export const createProductSchema = z
         nameSet.size === data.productColors.length
       );
     },
-    {
+    { 
       message: "Les couleurs doivent avoir des noms et codes hex uniques.",
       path: ["colors"],
     },

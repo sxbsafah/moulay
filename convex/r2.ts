@@ -13,6 +13,9 @@ const ACCEPTED_IMAGE_TYPES = [
   "image/jpg",
   "image/png",
   "image/webp",
+  "image/avif",
+  "image/gif",
+  "image/svg+xml",
 ];
 
 export const r2 = new R2(components.r2);

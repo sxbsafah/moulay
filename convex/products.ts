@@ -4,7 +4,7 @@ import { ConvexError } from "convex/values";
 import checkPermission from "../src/lib/checkPermission";
 import { v } from "convex/values";
 import { throwValidation } from "../src/lib/throwValidation";
-import { createProductSchema } from "../src/schemas/schemas";
+import { createProductSchema, productFormSchema } from "../src/schemas/schemas";
 import { paginationOptsValidator } from "convex/server";
 import { Id } from "./_generated/dataModel";
 import { R2 } from "@convex-dev/r2";
@@ -82,23 +82,23 @@ export const createProduct = mutation({
       });
     }
     const productId = await ctx.db.insert("products", {
-      name: parsed.data.name,
-      description: parsed.data.description,
-      category: parsed.data.category as Id<"categories">,
+      name: parsed.data.name.trim(),
+      description: parsed.data.description.trim(),
+      category: parsed.data.category.trim() as Id<"categories">,
       costPrice: parsed.data.costPrice,
       salePrice: parsed.data.salePrice,
     });
     for (const color of parsed.data.productColors) {
       const productColorId = await ctx.db.insert("productColors", {
-        productId: productId,
-        colorHex: color.colorHex,
-        colorName: color.colorName,
+        productId: productId.trim() as Id<"products">,
+        colorHex: color.colorHex.trim(),
+        colorName: color.colorName.trim(),
         images: color.images,
       });
       for (const size of color.sizes) {
         await ctx.db.insert("productVariants", {
-          productId: productId,
-          size: size.size,
+          productId: productId.trim() as Id<"products">,
+          size: size.size.trim(),
           quantity: size.quantity,
           productColor: productColorId,
         });
@@ -180,7 +180,7 @@ export const listProducts = query({
             ctx.db.get("categories", product.category),
             ctx.db
               .query("productColors")
-              .withIndex("by_productId", (q) => q.eq("productId", product._id))
+              .withIndex("by_product", (q) => q.eq("productId", product._id))
               .collect(),
           ]);
 
@@ -212,9 +212,11 @@ export const listProducts = query({
                   images: productColor.images
                     ? await Promise.all(
                         productColor.images.map(async (image) => ({
-                          imageUploadStatus: "uploaded",
+                          imageUploadStatus: "success" as const,
                           imageKey: image,
-                          imageUrl: await r2.getUrl(image),
+                          imageUrl: await r2.getUrl(image, {
+                            expiresIn: 604800,
+                          }),
                           imageId: image,
                         })),
                       )
@@ -222,6 +224,7 @@ export const listProducts = query({
                   sizes: variants.map((variant) => ({
                     size: variant.size,
                     quantity: variant.quantity,
+                    variantId: variant._id,
                   })),
                 };
               }),
@@ -232,6 +235,221 @@ export const listProducts = query({
     };
   },
 });
+
+
+export const deleteProduct = mutation({
+  args: {
+    productId: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "User must be authenticated to delete products",
+        details: {
+          root: "Please log in to delete products",
+        },
+      });
+    }
+    const hasAccess = await checkPermission(ctx, userId, "staff");
+    if (!hasAccess) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "User does not have permission to delete products",
+        details: {
+          root: "You must be an admin to delete products",
+        },
+      });
+    }
+    const product = await ctx.db.get("products", args.productId);
+    if (!product) {
+      throw new ConvexError({
+        code: "not_found",
+        message: "Product not found",
+        details: {
+          productId: "The specified product does not exist",
+        },
+      });
+    }
+    await ctx.db.delete("products", args.productId);
+    const productVarinats = await ctx.db.query("productVariants")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+    for (const variant of productVarinats) {
+      await ctx.db.delete("productVariants", variant._id);
+    }
+    const productColors = await ctx.db.query("productColors")
+      .withIndex("by_product", (q) => q.eq("productId", args.productId))
+      .collect();
+    for (const color of productColors) {
+      await ctx.db.delete("productColors", color._id);
+    }
+  },
+})
+
+
+export const updateProduct = mutation({
+  args: {
+    productId: v.id("products"),
+    name: v.string(),
+    description: v.string(),
+    category: v.id("categories"),
+    costPrice: v.number(),
+    salePrice: v.number(),
+    productColors: v.array(
+      v.object({
+        productColorId: v.optional(v.id("productColors")),
+        colorHex: v.string(),
+        colorName: v.string(),
+        images: v.array(v.string()),
+        sizes: v.array(
+          v.object({
+            size: v.string(),
+            quantity: v.number(),
+            productVariantId: v.optional(v.id("productVariants")),
+          }),
+        ),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "L'utilisateur doit être authentifié pour modifier des produits",
+        details: {
+          root: "Veuillez vous connecter en tant qu'administrateur pour modifier des produits",
+        },
+      });
+    }
+    const hasAccess = await checkPermission(ctx, userId, "admin");
+    if (!hasAccess) {
+      throw new ConvexError({
+        code: "unauthorized",
+        message: "L'utilisateur n'a pas la permission de modifier des produits",
+        details: {
+          root: "Vous devez être administrateur pour modifier des produits",
+        },
+      });
+    }
+    const product = await ctx.db.get("products", args.productId);
+    if (!product) {
+      throw new ConvexError({
+        code: "not_found",
+        message: "Produit non trouvé",
+        details: {
+          productId: "Le produit spécifié n'existe pas",
+        },
+      });
+    }
+    const parsed = createProductSchema.safeParse(args);
+    if (!parsed.success) {
+      throw throwValidation(parsed.error);
+    }
+    if (product.name !== parsed.data.name) {
+      const existingProduct = await ctx.db
+        .query("products")
+        .withIndex("by_name", (q) => q.eq("name", parsed.data.name))
+        .first();
+      if (existingProduct) {
+        throw new ConvexError({
+          code: "conflict",
+          message: "Un produit avec ce nom existe déjà",
+          details: {
+            name: "Le nom du produit doit être unique",
+          },
+        });
+      }
+    }
+    const category = await ctx.db.get("categories", args.category);
+    if (!category) {
+      throw new ConvexError({
+        code: "not_found",
+        message: "Catégorie non trouvée",
+        details: {
+          category: "La catégorie spécifiée n'existe pas",
+        },
+      });
+    }
+    const productColorMap = new Map<string, string[]>();
+    await Promise.all(args.productColors.map(async (color) => {
+      if (color.productColorId) {
+        const productColor = await ctx.db.get("productColors", color.productColorId);
+        if (!productColor) {
+          throw new ConvexError({
+            code: "not_found",
+            message: "Couleur de produit non trouvée",
+            details: {
+              productColorId: "La couleur de produit spécifiée n'existe pas",
+            },
+          });
+        }
+        productColorMap.set(color.productColorId, productColor.images);
+      }
+      await Promise.all(color.sizes.map(async (size) => {
+        if (size.productVariantId) {
+          const productVariant = await ctx.db.get("productVariants", size.productVariantId);
+          if (!productVariant) {
+            throw new ConvexError({
+              code: "not_found",
+              message: "Variante de produit non trouvée",
+              details: {
+                productVariantId: "La variante de produit spécifiée n'existe pas",
+              },
+            });
+          }
+        }
+      }));
+    })); 
+
+    await ctx.db.patch("products", args.productId, {
+      name: parsed.data.name.trim(),
+      description: parsed.data.description.trim(),
+      category: parsed.data.category.trim() as Id<"categories">,
+      costPrice: parsed.data.costPrice,
+      salePrice: parsed.data.salePrice,
+    });
+
+    await Promise.all(args.productColors.map(async (color) => {
+      if (color.productColorId) {
+        const oldImages = productColorMap.get(color.productColorId) || [];
+        const imagesToDelete = oldImages.filter(img => !color.images.includes(img));
+        await Promise.all(imagesToDelete.map(async img => await r2.deleteObject(ctx, img)));
+        await ctx.db.patch("productColors", color.productColorId, {
+          colorHex: color.colorHex.trim(),
+          colorName: color.colorName.trim(),
+          images: color.images,
+        });
+      } else {
+        const productColorId = await ctx.db.insert("productColors", {
+          productId: args.productId as Id<"products">,
+          colorHex: color.colorHex.trim(),
+          colorName: color.colorName.trim(),
+          images: color.images,
+        });
+        color.productColorId = productColorId;
+      }
+      
+      await Promise.all(color.sizes.map(async (size) => {
+        if (size.productVariantId) {
+          await ctx.db.patch("productVariants", size.productVariantId, {
+            size: size.size.trim(),
+            quantity: size.quantity,
+          });
+        } else {
+          await ctx.db.insert("productVariants", {
+            productId: args.productId as Id<"products">,
+            size: size.size.trim(),
+            quantity: size.quantity,
+            productColor: color.productColorId!,
+          });
+        }
+      }));
+    }))
+  }
+})
 
 // export const createImageMetadata = internalMutation({
 //   args: {

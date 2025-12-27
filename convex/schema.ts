@@ -40,8 +40,8 @@ export default defineSchema({
     productId: v.id("products"),
     colorName: v.string(),
     colorHex: v.string(),
-    images: v.optional(v.array(v.string())),
-  }).index("by_productId", ["productId"]),
+    images: v.array(v.string()),
+  }).index("by_product", ["productId"]),
   categories: defineTable({
     name: v.string(),
   })

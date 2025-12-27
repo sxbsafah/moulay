@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 
-import { useForm, useFieldArray } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import {  useFieldArray, UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,8 +26,7 @@ import {
   Tag,
   Euro,
 } from "lucide-react";
-import { productFormSchema, type ProductFormData } from "@/schemas/schemas";
-import { Spinner } from "../ui/spinner";
+import {  type ProductFormData } from "@/schemas/schemas";
 import FormErrors from "../FormErrors";
 import { ConvexError } from "convex/values";
 import { useMutation } from "convex/react";
@@ -37,45 +35,31 @@ import { Id } from "convex/_generated/dataModel";
 import { handleErrors } from "@/lib/handleErrors";
 import { useWatch } from "react-hook-form";
 import ColorVariantForm from "./ColorVariantForm";
+import { toast } from "sonner";
 
 
-type Category = {
+export type Category = {
   _id: string;
   name: string;
 };
 
 export type ProductFormProps = {
-  defaultValues?: Partial<ProductFormData>;
+  form: UseFormReturn<ProductFormData>;
   categories: Category[];
   isEdit?: boolean;
-  setShowCreateSheet?: React.Dispatch<React.SetStateAction<boolean>>;
+  productId?: Id<"products">;
 }
 
 
-const initialValues = {
-  name: "",
-  description: "",
-  category: "",
-  productColors: [
-    {
-      colorName: "",
-      colorHex: "#000000",
-      images: [],
-      sizes: [{ size: "M", quantity: undefined }],
-    },
-  ],
-  costPrice: undefined,
-  salePrice: undefined,
-};
 
-export default function ProductForm({ defaultValues, categories, setShowCreateSheet, isEdit }: ProductFormProps) {
+
+export default function ProductForm({ categories, isEdit, form, productId}: ProductFormProps) {
 
   const createProduct = useMutation(api.products.createProduct);
-  const form = useForm<ProductFormData>({ resolver: zodResolver(productFormSchema), defaultValues: defaultValues ?? initialValues, });
   const { fields: colorFields, append: appendColor, remove: removeColor, } = useFieldArray({ control: form.control, name: "productColors", });
   const watchCostPrice = useWatch({ control: form.control, name: "costPrice", });
   const watchSalePrice = useWatch({ control: form.control, name: "salePrice", });
-
+  const updateProduct = useMutation(api.products.updateProduct);
 
   const handleAddColor = () => {
     appendColor({
@@ -92,7 +76,7 @@ export default function ProductForm({ defaultValues, categories, setShowCreateSh
       await createProduct({
         name: data.name,
         description: data.description,
-        category: "k97dch5nks59ma58f3cbfxzs9s7xmxz3" as Id<"categories">,
+        category: data.category as Id<"categories">,
         costPrice: data.costPrice,
         salePrice: data.salePrice,
         productColors: data.productColors.map((color) => ({
@@ -100,6 +84,7 @@ export default function ProductForm({ defaultValues, categories, setShowCreateSh
           images: color.images.map((img) => img.imageKey!),
         }))
       });
+      toast.success("Produit créé avec succès !");
     } catch (error) {
       console.log(error);
       if (error instanceof ConvexError) {
@@ -108,7 +93,36 @@ export default function ProductForm({ defaultValues, categories, setShowCreateSh
     }
   };
 
-  const handleSubmitEdit = (data: ProductFormData) => {};
+  const handleSubmitEdit = async (data: ProductFormData) => {
+    console.log("Edit submit data:", data);
+    try {
+      if (isEdit && productId) {
+        await updateProduct({
+          productId: productId,
+          name: data.name,
+          description: data.description,
+          category: data.category as Id<"categories">,
+          costPrice: data.costPrice,
+          salePrice: data.salePrice,
+          productColors: data.productColors.map((color) => ({
+            ...color,
+            productColorId: color.productColorId as Id<"productColors">,
+            images: color.images.map((img) => img.imageKey!),
+            sizes: color.sizes.map((size) => ({
+              ...size,
+              productVariantId: size.productVariantId as Id<"productVariants">,
+            })),
+          }))
+        });
+      }
+      toast.success("Produit mis à jour avec succès !");
+    } catch (error) {
+      console.log(error);
+      if (error instanceof ConvexError) {
+        handleErrors(error, form.setError);
+      }
+    }
+  };
 
   const calculateMargin = () => {
     const cost = Number(watchCostPrice) || 0;
@@ -316,6 +330,7 @@ export default function ProductForm({ defaultValues, categories, setShowCreateSh
                 <ColorVariantForm
                   key={colorField.id}
                   colorIndex={colorIndex}
+                  isEdit={isEdit}
                   form={form}
                   onRemove={() => removeColor(colorIndex)}
                   canRemove={colorFields.length > 1}
@@ -336,34 +351,6 @@ export default function ProductForm({ defaultValues, categories, setShowCreateSh
           </form>
         </Form>
       </div>
-      <div className="border-t border-border bg-background p-4 shrink-0">
-        <div className="flex gap-3 justify-end">
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (setShowCreateSheet) {
-                setShowCreateSheet(false);
-              }
-            }}
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit"
-            form="product-form"
-            className="bg-primary hover:bg-primary/90 min-w-30"
-            disabled={form.formState.isSubmitting || form.watch("productColors").some(color => color.images.some(image => image.imageUploadStatus === "uploading"))}
-          >
-            {form.formState.isSubmitting ? (
-              <Spinner />
-            ) : defaultValues ? (
-              "Modifier le Produit"
-            ) : (
-              "Créer le Produit"
-            )}
-          </Button>
-        </div>
-      </div>
     </>
   );
 }
@@ -371,4 +358,3 @@ export default function ProductForm({ defaultValues, categories, setShowCreateSh
 
 
 
-export { type ProductFormData };

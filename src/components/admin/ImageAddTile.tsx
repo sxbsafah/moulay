@@ -26,8 +26,8 @@ const ImageAddTile = ({ handleAddImage, handleReplaceImage }: ImageAddTileProps)
   const handleOnChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return
-    if (file.size > 1 * 1024 * 1024) return toast.error("Le fichier dépasse la taille maximale autorisée.",);
-    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) return toast.error(`Le type de fichier (${file.type}) n'est pas accepté.`);
+    if (file.size > 30 * 1024 * 1024) return toast.error("Le fichier dépasse la taille maximale autorisée.",);
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"].includes(file.type)) return toast.error(`Le type de fichier (${file.type}) n'est pas accepté.`);
     try {
       const shouldAbort = handleAddImage({ imageId: file.name, imageUploadStatus: "uploading" });
       if (shouldAbort) return;
@@ -37,7 +37,6 @@ const ImageAddTile = ({ handleAddImage, handleReplaceImage }: ImageAddTileProps)
       fileInputRef.current!.value = "";
     }
   }
-
   
   return (
     <label
@@ -50,7 +49,7 @@ const ImageAddTile = ({ handleAddImage, handleReplaceImage }: ImageAddTileProps)
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp"
+        accept="image/jpeg,image/jpg,image/png,image/webp,image/avif,image/gif,image/svg+xml"
         className="hidden"
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onChange={handleOnChange}

@@ -2,13 +2,11 @@ import { Merge } from "react-hook-form";
 import { FieldError, FieldErrorsImpl } from "react-hook-form";
 import { cn } from "@/lib/utils";
 import { Upload, X } from "lucide-react";
-import { ImageInput } from "@/schemas/schemas";
+import { ImageInput, ProductFormData } from "@/schemas/schemas";
 import useUploadImage from "@/hooks/useUploadImage";
 import { useRef } from "react";
 import { api } from "../../../convex/_generated/api";
 import { useMutation } from "convex/react";
-import { ProductFormData } from "@/schemas/schemas";
-import { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
 
 
@@ -16,28 +14,17 @@ import { toast } from "sonner";
 
 type ImageTileProps = {
   imageId: string;
+  imageUrl: string;
   imageIndex: number;
+  isEditing?: boolean;
   updatedImageKey: string;
   previews: { imageId: string; imageUrl: string }[];
   handleReplaceImage: (imageId: string, image: ImageInput) => boolean;
   handleRemoveImage: (imageId: string) => void;
-  colorErrors?: Merge<FieldError, FieldErrorsImpl<{
-    colorName: string;
-    colorHex: string;
-    images: {
-      imageKey?: string;
-      imageUrl?: string;
-      imageUploadStatus: "success" | "uploading";
-      imageId: string;
-    }[];
-    sizes: {
-        size: string;
-        quantity: number;
-    }[];
-}>> | undefined
+  colorErrors?: Merge<FieldError, FieldErrorsImpl<ProductFormData["productColors"][number]>>;
 }
 
-const ImageTile = ({ imageId,imageIndex, updatedImageKey ,previews, handleReplaceImage, handleRemoveImage, colorErrors }: ImageTileProps) => {
+const ImageTile = ({ imageId,imageIndex, imageUrl, updatedImageKey ,previews, handleReplaceImage, handleRemoveImage, colorErrors, isEditing }: ImageTileProps) => {
 
   const uploadFile = useUploadImage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,8 +33,8 @@ const ImageTile = ({ imageId,imageIndex, updatedImageKey ,previews, handleReplac
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 30 * 1024 * 1024) return toast.error("Le fichier dépasse la taille maximale autorisée (30 MB).")
-    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) return toast.error("Le type de fichier n'est pas accepté.");
+    if (file.size > 30 * 1024 * 1024) return toast.error("Le fichier dépasse la taille maximale autorisée 30 MB.")
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"].includes(file.type)) return toast.error("Le type de fichier n'est pas accepté.");
     try {
       const isImageDeleted = await deleteImage({ imageKey: updatedImageKey });
       if (!isImageDeleted.success) {
@@ -62,14 +49,15 @@ const ImageTile = ({ imageId,imageIndex, updatedImageKey ,previews, handleReplac
     }
   }
 
-
   const handleRemoveClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    const isImageDeleted = await deleteImage({ imageKey: updatedImageKey });
-    if (!isImageDeleted.success) {
-      return toast.error("Erreur lors de la suppression de l'image.");
+    if (!isEditing && imageUrl.startsWith("blob:")) {
+      const isImageDeleted = await deleteImage({ imageKey: updatedImageKey });
+      if (!isImageDeleted.success) {
+        return toast.error("Erreur lors de la suppression de l'image.");
+      }
     }
-    handleRemoveImage(imageId);
+    return handleRemoveImage(imageId);
   }
 
   return (

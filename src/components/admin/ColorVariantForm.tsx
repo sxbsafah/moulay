@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import useImagePreviews from "@/hooks/useImagePreviews";
 import { useWatch } from "react-hook-form";
-import { ProductFormData } from "./ProductForm";
+import { ProductFormData } from "@/schemas/schemas";
 import ImageTile from "./ImageTile";
 import ImageAddTile from "./ImageAddTile";
 import { ImageInput } from "@/schemas/schemas";
@@ -33,6 +33,7 @@ import { Fragment } from "react/jsx-runtime";
 
 type ColorVariantFormProps  = {
   colorIndex: number;
+  isEdit?: boolean;
   form: UseFormReturn<ProductFormData>;
   onRemove: () => void;
   canRemove: boolean;
@@ -40,7 +41,7 @@ type ColorVariantFormProps  = {
 
 
 
-function ColorVariantForm({ colorIndex, form, onRemove, canRemove, }: ColorVariantFormProps) {
+function ColorVariantForm({ colorIndex, form, isEdit, onRemove, canRemove, }: ColorVariantFormProps) {
 
   const { fields: sizeFields, append: appendSize, remove: removeSize, } = useFieldArray({ control: form.control, name: `productColors.${colorIndex}.sizes`,});
   const colorImages = useWatch({ control: form.control, name: `productColors.${colorIndex}.images`, });
@@ -174,7 +175,7 @@ function ColorVariantForm({ colorIndex, form, onRemove, canRemove, }: ColorVaria
             {colorImages.map((image, imageIndex) => (
               <Fragment key={image.imageId}>
                 {image.imageUploadStatus === "success" && image.imageUrl && (
-                  <ImageTile imageId={image.imageId} imageIndex={imageIndex} previews={previews as { imageId: string; imageUrl: string }[]} handleReplaceImage={handleReplaceImage} handleRemoveImage={handleRemoveImage} colorErrors={colorErrors} updatedImageKey={image.imageKey as string}  />
+                  <ImageTile imageUrl={image.imageUrl} isEditing={isEdit} imageId={image.imageId} imageIndex={imageIndex} previews={previews as { imageId: string; imageUrl: string }[]} handleReplaceImage={handleReplaceImage} handleRemoveImage={handleRemoveImage} colorErrors={colorErrors} updatedImageKey={image.imageKey as string}  />
                 )}
                 {image.imageUploadStatus === "uploading" && (
                   <div
