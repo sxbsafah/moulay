@@ -44,6 +44,8 @@ import { useMutation } from "convex/react";
 import { Spinner } from "@/components/ui/spinner";
 import ViewProductSheet from "@/components/admin/ViewProductSheet";
 import EditProductSheet from "@/components/admin/EditProductSheet";
+import AdminTitleCard from "@/components/admin/AdminTitleCard";
+
 
 export type ProductData = {
   _id: Id<"products">;
@@ -78,8 +80,8 @@ export default function Products() {
   const { results } = usePaginatedQuery(api.products.listProducts,{}, { initialNumItems: 10 },);
   const categories = useQuery(api.categories.getAllCategories) || [];
   const deleteProduct = useMutation(api.products.deleteProduct);
-  
-  
+
+
   const [isDeleting, setIsDeleting] = useState(false);
   const [viewProduct, setViewProduct] = useState<ProductData | null>(null,);
   const [editProduct, setEditProduct] = useState<ProductData | null>(null,);
@@ -271,24 +273,12 @@ export default function Products() {
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 shadow-xl border border-primary/20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
-        <div className="relative">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="size-16 rounded-xl bg-primary-foreground/20 backdrop-blur-sm flex items-center justify-center">
-              <Package className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-3xl font-serif font-bold text-primary-foreground">
-                Gestion des Produits
-              </h1>
-              <p className="text-primary-foreground/80 text-sm mt-0.5">
-                Gérez et optimisez votre catalogue de produits
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminTitleCard
+        title="Gestion des Produits"
+        description="Gérez et optimisez votre catalogue de produits"
+        icon={<Package className="w-6 h-6 text-primary-foreground" />}
+      />
+
 
       {statistics ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -341,7 +331,7 @@ export default function Products() {
             </Button>
           </div>
           {results ? (
-            <DataTable columns={ProductsColumns} data={results} />
+            <DataTable columns={ProductsColumns} data={results} filterBy={"nom de Produits"} />
           ) : (
             <ProductsTableSkeleton />
           )}

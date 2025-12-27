@@ -25,10 +25,7 @@ type DataTableProps<TData, TValue> = {
   data: TData[];
 };
 
-const DataTable = <TData, TValue>({
-columns,
-  data,
-}: DataTableProps<TData, TValue>) => {
+const DataTable = <TData, TValue>({ columns,data, filterBy }: DataTableProps<TData, TValue> & { filterBy: string }) => {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const table = useReactTable({
     data,
@@ -46,7 +43,7 @@ columns,
       <div className="flex items-center py-4">
         
         <Input
-          placeholder="Filter Products..."
+          placeholder={`filtrer par ${filterBy}...`}
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
           onChange={(event) =>
             table.getColumn("name")?.setFilterValue(event.target.value)

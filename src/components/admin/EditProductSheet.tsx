@@ -13,6 +13,7 @@ import { Spinner } from "../ui/spinner";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { ProductFormData } from "@/schemas/schemas";
+import SheetHeader from "./SheetHeader";
 
 
 type EditProductSheetProps = {
@@ -74,22 +75,12 @@ const EditProductSheet = ({ editProduct, setEditProduct, categories, }: EditProd
       onOpenChange={handleClose}
     >
       <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col h-full">
-        <div className="relative bg-linear-to-br from-primary via-primary/95 to-primary/90 border-b border-primary/20 px-6 py-6 shrink-0 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.1),transparent_60%)]" />
-          <div className="relative flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary-foreground/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg">
-              <Pencil className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-serif text-xl font-semibold text-primary-foreground">
-                Modifier le Produit
-              </h2>
-              <p className="text-sm text-primary-foreground/80 truncate">
-                {editProduct?.name}
-              </p>
-            </div>
-          </div>
-        </div>
+        <SheetHeader
+          title="Modifier le Produit"
+          description="Apportez des modifications à votre produit existant"
+          icon={<Pencil className="w-6 h-6 text-primary-foreground" />}
+        />
+
 
         <div className="flex-1 overflow-y-auto">
           {editProduct && (
