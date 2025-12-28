@@ -1,24 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router";
-import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import FormErrors from "@/components/FormErrors";
 import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { useNavigate } from "react-router";
 import { signUpSchema } from "@/schemas/schemas";
-import { ConvexError } from "convex/values";
-import { useState } from "react";
-import VerifyOtp from "@/components/VerifyOTP";
-import { handleErrors } from "@/lib/handleErrors";
-
+import { authClient } from "@/lib/auth-client";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 export default function SignUp() {
-  const { signIn } = useAuthActions();
   const navigate = useNavigate();
   const form = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -29,41 +23,42 @@ export default function SignUp() {
       password: "",
     },
   });
-  const [step, setStep] = useState<"signup" | "otp">("signup");
   const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
-    try {
-      const result = await signIn("password", {
-        flow: "signUp",
-        password: data.password,
+    await authClient.signUp.email(
+      {
         email: data.email,
-        firstname: data.firstname,
-        lastname: data.lastname,
-      });
-      if (!result.signingIn) return setStep("otp");
-      return await navigate("/");
-    } catch (error: any) {
-      if (error instanceof ConvexError) {
-        handleErrors(error, form.setError);
-      } else {
-        if (error instanceof Error) {
-          if (error.message.includes("already exists")) {
+        password: data.password,
+        name: `${data.firstname} ${data.lastname}`,
+      },
+      {
+        async onSuccess(ctx) {
+          await navigate(
+            "/verification-email?email=" + encodeURIComponent(data.email),
+          );
+        },
+        onError(ctx) {
+          if (ctx.error.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
             form.setError("email", {
               type: "server",
               message: "Un compte avec cet e-mail existe déjà.",
             });
-          } else {
+          } else if (ctx.error.status === 429) {
+            toast.error(
+              "Trop de tentatives d'inscription. Veuillez réessayer plus tard.",
+            );
+          }
+          else {
             form.setError("root", {
               type: "server",
-              message: "Échec de la création du compte. Veuillez réessayer.",
+              message: "Échec de l'inscription. Veuillez réessayer.",
             });
           }
-        }
-      }
-    }
+        },
+      },
+    );
   };
 
   return (
-    step === "signup" ? (
     <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
       <form
         id="sign-in-form"
@@ -169,7 +164,7 @@ export default function SignUp() {
                       autoComplete="new-password"
                       className={fieldState.invalid ? "border-destructive" : ""}
                     />
-                    <PasswordRequirements password={form.watch("password")} />
+                    {/* <PasswordRequirements password={form.watch("password")} /> */}
                   </Field>
                 )}
               />
@@ -194,6 +189,5 @@ export default function SignUp() {
         </div>
       </form>
     </section>
-    ) : <VerifyOtp email={form.watch("email")}  />
-);
+  );
 }

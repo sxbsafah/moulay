@@ -11,8 +11,7 @@ import PasswordRequirements from "@/components/auth/PasswordRequirements";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
-import VerifyOtp from "@/components/VerifyOTP";
-
+import VerifyOtp from "@/components/VerifyEmail";
 
 export default function ForgotPassword() {
   const { signIn } = useAuthActions();
@@ -159,6 +158,10 @@ export default function ForgotPassword() {
       </form>
     </section>
   ) : (
-      <VerifyOtp email={watch("email")} password={watch("newPassword")} reset={true} />
+    <VerifyOtp
+      email={watch("email")}
+      password={watch("newPassword")}
+      reset={true}
+    />
   );
 }

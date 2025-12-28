@@ -9,6 +9,8 @@ import  ForgotPassword  from "@/pages/ForgetPassword.tsx";
 import AdminLayout from "./layouts/AdminLayout.tsx";
 import Products from "./pages/Products.tsx";
 import { Toaster } from "@/components/ui/sonner"
+import VerifyEmail from "./components/VerifyEmail.tsx";
+
 
 const App = () => {
   return (
@@ -22,6 +24,7 @@ const App = () => {
             <Route path="/connexion" element={<SignIn />} />
             <Route path="/inscription" element={<SignUp />} />
             <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
+            <Route path="/verification-email" element={<VerifyEmail />} />
           </Route>
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="produits" element={<Products />} />

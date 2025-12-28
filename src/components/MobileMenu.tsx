@@ -1,4 +1,5 @@
-import { MouseEventHandler, useState } from "react";
+/* eslint-disable @typescript-eslint/no-misused-promises */
+import {  useState } from "react";
 import { Link } from "react-router";
 import { Menu, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,14 +17,25 @@ import {
 } from "@/components/ui/collapsible";
 import { collectionCategories } from "@/lib/products";
 import { mobileMenuItems } from "@/lib/contstants";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { useNavigate } from "react-router";
+import { authClient } from "@/lib/auth-client";
+
 
 function MobileMenu() {
   const [open, setOpen] = useState(false);
   const [collectionsExpanded, setCollectionsExpanded] = useState(false);
-  const { signOut } = useAuthActions();
+  // const { signOut } = useAuthActions();
   const navigate = useNavigate();
+
+  const signOutUser = async () => {
+    await authClient.signOut({
+      fetchOptions: {
+        onSuccess: async () => {
+          await navigate("/connexion");
+        }
+      }
+    });
+  }
 
 
   return (
@@ -88,7 +100,7 @@ function MobileMenu() {
           </div>
           <Button
             className="flex items-center justify-between py-4 text-base font-medium tracking-wide border-b border-border/50"
-            onClick={() => void signOut().then(() => navigate("/connexion"))}
+            onClick={signOutUser}
           >
             Deconnecte
             <ChevronRight className="h-5 w-5 text-muted-foreground" />

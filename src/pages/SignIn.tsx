@@ -6,18 +6,14 @@ import { z } from "zod";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { useNavigate } from "react-router";
 import { Spinner } from "@/components/ui/spinner";
 import { signInSchema } from "@/schemas/schemas";
-import { useState } from "react";
-import VerifyOtp from "@/components/VerifyOTP";
+import { authClient } from "@/lib/auth-client";
+import { toast } from "sonner";
 
 export default function SignIn() {
-  const [step, setStep] = useState<"signin" | "otp">("signin");
-  const { signIn } = useAuthActions();
   const navigate = useNavigate();
-
   const form = useForm<z.infer<typeof signInSchema>>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -25,35 +21,42 @@ export default function SignIn() {
       password: "",
     },
   });
-  
 
   const onSubmit = async (data: z.infer<typeof signInSchema>) => {
-    try {
-      const result = await signIn("password", {
-        flow: "signIn",
-        email: data.email,
-        password: data.password,
-      });
-      if (result.signingIn) return await navigate("/");
-      return setStep("otp");
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes("Invalid")) {
-          return form.setError("root", {
+    await authClient.signIn.email({
+      email: data.email, // required
+      password: data.password, // required
+      rememberMe: true,
+      callbackURL: `${window.location.origin}/`,
+    }, {
+      async onSuccess(ctx) {
+        await navigate("/");
+      },
+      async onError(ctx) {
+        if (ctx.error.status === 401) {
+          form.setError("root", {
             type: "server",
             message:
               "Échec de la connexion. Veuillez vérifier vos informations.",
           });
+        } else if (ctx.error.status === 403) {
+          await navigate("/verification-email?email=" + encodeURIComponent(data.email));
+        } else if (ctx.error.status === 429) {
+          toast.error(
+            "Trop de tentatives de connexion. Veuillez réessayer plus tard.",
+          );
+        } else {
+          form.setError("root", {
+            type: "server",
+            message: "Une erreur est survenue. Veuillez réessayer.",
+          });
+          
         }
-        form.setError("root", {
-          type: "server",
-          message: "Une erreur est survenue. Veuillez réessayer.",
-        });
       }
-    }
+    });
   };
 
-  return step === "signin" ? (
+  return (
     <section className="flex min-h-screen bg-zinc-50 px-4 py-16 md:py-32 dark:bg-transparent">
       <form
         id="sign-in-form"
@@ -145,5 +148,5 @@ export default function SignIn() {
         </div>
       </form>
     </section>
-  ) : <VerifyOtp email={form.watch("email")}  />;
+  );
 }

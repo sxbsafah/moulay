@@ -6,34 +6,19 @@ export const signUpSchema = z.object({
   firstname: z
     .string()
     .trim()
-    .min(2, "Le prénom doit contenir au moins 2 caractères.")
-    .max(50, "Le prénom ne peut pas dépasser 50 caractères.")
-    .regex(/^[A-Za-zÀ-ÿ]+$/, "Le prénom ne peut contenir que des lettres."),
+    .min(1, "Le prénom doit contenir au moins 1 caractère.")
+    .max(50, "Le prénom ne peut pas dépasser 50 caractères."),
   lastname: z
     .string()
     .trim()
-    .min(2, "Le nom doit contenir au moins 2 caractères.")
-    .max(50, "Le nom ne peut pas dépasser 50 caractères.")
-    .regex(/^[A-Za-zÀ-ÿ]+$/, "Le nom ne peut contenir que des lettres."),
+    .min(1, "Le nom doit contenir au moins 1 caractère.")
+    .max(50, "Le nom ne peut pas dépasser 50 caractères."),
   email: z.email("Adresse e-mail invalide."),
   password: z
     .string()
     .trim()
     .min(8, "Le mot de passe doit contenir au moins 8 caractères.")
-    .max(100, "Le mot de passe ne peut pas dépasser 100 caractères.")
-    .regex(
-      /[a-z]/,
-      "Le mot de passe doit contenir au moins une lettre minuscule.",
-    )
-    .regex(
-      /[A-Z]/,
-      "Le mot de passe doit contenir au moins une lettre majuscule.",
-    )
-    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre.")
-    .regex(
-      /[!@#$%^&*(),.?":{}|<>]/,
-      "Le mot de passe doit contenir au moins un caractère spécial.",
-    ),
+    .max(128, "Le mot de passe ne peut pas dépasser 128 caractères.")
 });
 
 export const signInSchema = z.object({
